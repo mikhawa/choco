@@ -52,6 +52,26 @@ INSERT INTO `article` (`article_id`, `article_title`, `article_slug`, `article_t
 -- --------------------------------------------------------
 
 --
+-- Structure de la table `message`
+--
+
+DROP TABLE IF EXISTS `message`;
+CREATE TABLE IF NOT EXISTS `message` (
+                                         `message_id` int UNSIGNED NOT NULL AUTO_INCREMENT,
+                                         `message_text` varchar(600) NOT NULL,
+                                         `message_create_at` datetime DEFAULT CURRENT_TIMESTAMP,
+                                         `message_validate_at` datetime DEFAULT NULL,
+                                         `message_status` enum('publié','en attente','désactivé') DEFAULT 'en attente',
+                                         `user_user_id` int UNSIGNED NOT NULL,
+                                         `article_article_id` int UNSIGNED NOT NULL,
+                                         PRIMARY KEY (`message_id`),
+                                         KEY `fk_message_user_idx` (`user_user_id`),
+                                         KEY `fk_message_article_idx` (`article_article_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Structure de la table `user`
 --
 
@@ -84,5 +104,12 @@ INSERT INTO `user` (`user_id`, `user_login`, `user_pwd`, `user_full_name`, `user
 --
 ALTER TABLE `article`
     ADD CONSTRAINT `fk_article_user` FOREIGN KEY (`user_user_id`) REFERENCES `user` (`user_id`);
+
+--
+-- Contraintes pour la table `message`
+--
+ALTER TABLE `message`
+    ADD CONSTRAINT `fk_message_user` FOREIGN KEY (`user_user_id`) REFERENCES `user` (`user_id`),
+    ADD CONSTRAINT `fk_message_article` FOREIGN KEY (`article_article_id`) REFERENCES `article` (`article_id`);
 SET FOREIGN_KEY_CHECKS=1;
 COMMIT;
