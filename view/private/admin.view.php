@@ -14,7 +14,10 @@ $badges = ['publié' => 'badge-success', 'en attente' => 'badge-warning', 'désa
         <h1>Administration</h1>
         <p><?= count($articles) ?> article<?= count($articles) > 1 ? 's' : '' ?> au total</p>
     </div>
-    <a class="btn" href="<?= RACINE_URL ?>/admin/create">+ Nouvel article</a>
+    <div class="page-head-actions">
+        <a class="btn btn-outline" href="<?= RACINE_URL ?>/admin/messages">Modérer les messages</a>
+        <a class="btn" href="<?= RACINE_URL ?>/admin/create">+ Nouvel article</a>
+    </div>
 </section>
 
 <?php if ($flash): ?>

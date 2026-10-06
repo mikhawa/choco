@@ -5,10 +5,12 @@ declare(strict_types=1);
 
 use model\manager\ArticleManager;
 use model\manager\UserManager;
+use model\manager\MessageManager;
 use model\mapping\ArticleMapping;
 
-// contrôleur du CRUD des articles, réservé aux admins
+// contrôleur du CRUD des articles et de la modération des messages, réservé aux admins
 // routes : /admin, /admin/create, /admin/update/{id}, /admin/delete/{id}
+//          /admin/messages, /admin/message-publish/{id}, /admin/message-disable/{id}, /admin/message-delete/{id}
 
 // sécurité : on vérifie à nouveau le rôle on peut aussi vérifier le rôle dans la session.
 if(!UserManager::isAdmin()) {
@@ -96,6 +98,35 @@ if($action == 'create') {
         UserManager::flashAndRedirect('/admin', "Cet article n'existe pas.", 'error');
     }
     UserManager::flashAndRedirect('/admin', "L'article a bien été supprimé.");
+
+} elseif($action == 'messages') {
+    // ---------- modération des messages ----------
+    $messageManager = new MessageManager($db);
+    $messages = $messageManager->getAllMessagesAdmin();
+    $flash = UserManager::getFlash();
+
+    require RACINE_PATH.'/view/private/messages.view.php';
+
+} elseif(in_array($action, ['message-publish', 'message-disable', 'message-delete'], true) && $id > 0) {
+    // ---------- actions de modération (en GET, avec le jeton dans l'URL) ----------
+    if(!UserManager::checkToken($_GET['token'] ?? null)) {
+        UserManager::flashAndRedirect('/admin/messages', "Action refusée, veuillez réessayer.", 'error');
+    }
+    $messageManager = new MessageManager($db);
+
+    if($action == 'message-delete') {
+        $done = $messageManager->deleteMessage($id);
+        $success = "Le message a bien été supprimé.";
+    } else {
+        $status = $action == 'message-publish' ? 'publié' : 'désactivé';
+        $done = $messageManager->updateMessageStatus($id, $status);
+        $success = $action == 'message-publish' ? "Le message a bien été publié." : "Le message a bien été désactivé.";
+    }
+
+    if(!$done) {
+        UserManager::flashAndRedirect('/admin/messages', "Ce message n'existe pas.", 'error');
+    }
+    UserManager::flashAndRedirect('/admin/messages', $success);
 
 } else {
     // ---------- liste des articles ----------

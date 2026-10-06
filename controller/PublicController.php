@@ -4,8 +4,10 @@
 declare(strict_types=1);
 
 use model\manager\ArticleManager;
+use model\manager\MessageManager;
 use model\manager\UserManager;
 use model\mapping\UserMapping;
+use model\mapping\MessageMapping;
 
 
 $articleManager = new ArticleManager($db);
@@ -14,6 +16,45 @@ $articleManager = new ArticleManager($db);
 if(isset($_GET['pg'],$_GET['slug']) && $_GET['pg'] == 'article') {
     $slug = $_GET['slug'];
     $article = $articleManager->getArticleBySlug($slug);
+    // l'utilisateur est-il connecté ? (seuls les connectés peuvent poster un message)
+    $isConnected = isset($_SESSION['user_id']);
+    $messageError = null;
+    $messageText = '';
+    $messages = [];
+    $flash = null;
+
+    if($article !== null) {
+        $messageManager = new MessageManager($db);
+
+        // envoi d'un nouveau message par un utilisateur connecté
+        if($isConnected && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $messageText = is_string($_POST['message_text'] ?? null) ? $_POST['message_text'] : '';
+            if(!UserManager::checkToken($_POST['token'] ?? null)) {
+                $messageError = "Session expirée, veuillez réessayer.";
+            } else {
+                try {
+                    // message publié directement pour un admin, en attente pour les autres
+                    $message = new MessageMapping([
+                        'message_text' => $messageText,
+                        'message_status' => UserManager::isAdmin() ? 'publié' : MessageMapping::DEFAULT_STATUS,
+                        'user_user_id' => $_SESSION['user_id'],
+                        'article_article_id' => $article->getArticleId(),
+                    ]);
+                    $messageManager->insertMessage($message);
+                    UserManager::flashAndRedirect('/article/'.$article->getArticleSlug().'#messages',
+                        UserManager::isAdmin()
+                            ? "Votre message a bien été publié."
+                            : "Votre message a bien été envoyé, il sera visible après validation.");
+                } catch (Exception $e) {
+                    $messageError = $e->getMessage();
+                }
+            }
+        }
+
+        // récupération des messages publiés de l'article
+        $messages = $messageManager->getMessagesByArticle($article->getArticleId());
+        $flash = UserManager::getFlash();
+    }
     require RACINE_PATH.'/view/public/article.view.php';
 // affichage de la page de connexion
 } elseif(isset($_GET['pg']) && $_GET['pg'] == 'connexion') {
